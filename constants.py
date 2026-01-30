@@ -10,3 +10,8 @@ PLAYER_MOVEMENT_SPEED = 5
 
 # скейлинг
 SPRITE_SCALING = 0.5
+TILE_SCALING = 0.5
+COIN_SCALING = 0.5
+
+# обновление анимки
+UPDATES_PER_FRAME = 7
