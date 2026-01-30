@@ -1,9 +1,9 @@
 import arcade
-import random
 import time
 import constants
 from models import ScoreManager
-from character import Player
+from entities.player import Player
+from entities.enemy import Enemy
 
 # 1. Сначала МЕНЮ (так как main.py ищет его первым)
 class MenuView(arcade.View):
@@ -79,10 +79,12 @@ class GameView(arcade.View):
     def setup(self):
         self.start_time = time.time()  # Засекаем время
         self.scene = arcade.Scene()
+        # Добавляем пустые списки заранее, чтобы не было KeyError
         self.scene.add_sprite_list("Player")
         self.scene.add_sprite_list("Walls")
         self.scene.add_sprite_list("Coins")
-        self.scene.add_sprite_list("Portal")  # Список для портала
+        self.scene.add_sprite_list("Enemies")  # Вот это должно быть тут!
+        self.scene.add_sprite_list("Portal")
 
         with open("map.txt", "r") as map_file:
             lines = map_file.readlines()
@@ -90,6 +92,7 @@ class GameView(arcade.View):
                 for col_index, char in enumerate(line.strip()):
                     x, y = col_index * 64, row_index * 64
 
+                    # --- ЭТО СПАВН СУЩНОСТЕЙ ПО БУКВАМ УКАЗАННЫМ В МАПЕ ---
                     if char == "G":
                         wall = arcade.Sprite(":resources:images/tiles/grassMid.png", scale=0.5)
                         wall.center_x, wall.center_y = x, y
@@ -106,6 +109,10 @@ class GameView(arcade.View):
                         portal = arcade.Sprite(":resources:images/items/gemBlue.png", scale=0.8)
                         portal.center_x, portal.center_y = x, y
                         self.scene.add_sprite("Portal", portal)
+                    # --- ДОБАВЛЯЕМ ЭТОТ БЛОК ---
+                    elif char == "S":  # ВРАГ
+                        enemy = Enemy(x, y)
+                        self.scene.add_sprite("Enemies", enemy)
 
         self.player = Player()
         self.player.center_x, self.player.center_y = 128, 128
@@ -130,6 +137,22 @@ class GameView(arcade.View):
     def on_update(self, delta_time):
         self.physics.update()
         self.scene.update_animation(delta_time, ["Player"])
+
+        # Логика врагов
+        enemies = self.scene.get_sprite_list("Enemies")
+        for enemy in enemies:
+            enemy.update()
+
+            # Проверка столкновения со стенами для разворота
+            if arcade.check_for_collision_with_list(enemy, self.scene["Walls"]):
+                enemy.reverse_direction()
+
+        # Проверка смерти игрока
+        if arcade.check_for_collision_with_list(self.player, enemies):
+            # Рестарт уровня или вызов экрана смерти
+            self.setup()
+
+
         self.explosions.update()
         self.camera.position = arcade.math.lerp_2d(self.camera.position, self.player.position, 0.1)
 
