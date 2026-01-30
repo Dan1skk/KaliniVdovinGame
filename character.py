@@ -17,6 +17,7 @@ class Player(arcade.Sprite):
         self.character_face_direction = 0
         self.cur_texture = 0
         self.scale = constants.SPRITE_SCALING
+        self.jumps_count = 0  # Счетчик прыжков
 
         main_path = ":resources:images/animated_characters/female_adventurer/femaleAdventurer"
 

@@ -1,44 +1,29 @@
 import arcade
 import random
+import time
 import constants
 from models import ScoreManager
-from character import Player  # Импортируем твой обновленный класс игрока
+from character import Player
 
-
-# --- ЭКРАН ПОБЕДЫ ---
-class WinView(arcade.View):
+# 1. Сначала МЕНЮ (так как main.py ищет его первым)
+class MenuView(arcade.View):
     def __init__(self):
         super().__init__()
-        self.score = 0
+        self.title_text = arcade.Text(
+            "PyJourney: Нажми ENTER, чтобы начать",
+            constants.SCREEN_WIDTH / 2,
+            constants.SCREEN_HEIGHT / 2,
+            arcade.color.WHITE,
+            20,
+            anchor_x="center"
+        )
 
     def on_show_view(self):
-        # Было: arcade.set_background_color(arcade.color.GREEN_CYAN)
-        arcade.set_background_color(arcade.color.AMAZON)  # Этот точно есть
-
-    def on_draw(self):
-        self.window.clear()
-        arcade.draw_text("ПОБЕДА!", constants.SCREEN_WIDTH / 2, 400,
-                         arcade.color.WHITE, 40, anchor_x="center")
-        arcade.draw_text(f"Ваш счет: {self.score}", constants.SCREEN_WIDTH / 2, 300,
-                         arcade.color.WHITE, 24, anchor_x="center")
-        arcade.draw_text("Нажмите ESC для возврата в меню", constants.SCREEN_WIDTH / 2, 200,
-                         arcade.color.WHITE, 16, anchor_x="center")
-
-    def on_key_press(self, key, modifiers):
-        if key == arcade.key.ESCAPE:
-            self.window.show_view(MenuView())
-
-
-# --- ГЛАВНОЕ МЕНЮ ---
-class MenuView(arcade.View):
-    def on_show_view(self):
-        # Было: arcade.set_background_color(arcade.color.DARK_BLUE_GRAY)
         arcade.set_background_color(arcade.color.CORNFLOWER_BLUE)
 
     def on_draw(self):
         self.window.clear()
-        arcade.draw_text("PyJourney: Нажми ENTER, чтобы начать", constants.SCREEN_WIDTH / 2, 325,
-                         arcade.color.WHITE, 20, anchor_x="center")
+        self.title_text.draw()
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ENTER:
@@ -47,7 +32,30 @@ class MenuView(arcade.View):
             self.window.show_view(game_view)
 
 
-# --- ИГРОВОЙ ПРОЦЕСС ---
+
+# 2. Потом ЭКРАН ПОБЕДЫ
+class WinView(arcade.View):
+    def __init__(self):
+        super().__init__()
+        self.score = 0
+        self.final_time = 0
+
+    def on_show_view(self):
+        arcade.set_background_color(arcade.color.AMAZON)
+
+    def on_draw(self):
+        self.window.clear()
+        arcade.draw_text("УРОВЕНЬ ПРОЙДЕН!", constants.SCREEN_WIDTH/2, 450, arcade.color.WHITE, 30, anchor_x="center")
+        arcade.draw_text(f"Монеты: {self.score}", constants.SCREEN_WIDTH/2, 350, arcade.color.WHITE, 20, anchor_x="center")
+        arcade.draw_text(f"Время: {self.final_time} сек.", constants.SCREEN_WIDTH/2, 300, arcade.color.WHITE, 20, anchor_x="center")
+        arcade.draw_text("Нажми ESC для выхода", constants.SCREEN_WIDTH/2, 150, arcade.color.WHITE, 14, anchor_x="center")
+
+    def on_key_press(self, key, modifiers):
+        if key == arcade.key.ESCAPE:
+            arcade.exit()
+
+
+
 class GameView(arcade.View):
     def __init__(self):
         super().__init__()
@@ -55,99 +63,113 @@ class GameView(arcade.View):
         self.player = None
         self.physics = None
 
-        # Камеры в 3.0+
         self.camera = arcade.Camera2D()
         self.gui_camera = arcade.Camera2D()
 
         self.score = 0
-        self.db = ScoreManager()
-        self.explosions = arcade.SpriteList()  # Для частиц (ФТ-5)
+        self.start_time = 0  # Время начала
+        self.total_time = 0  # Итоговое время
 
-        # Звуки
+        self.db = ScoreManager()
+        self.explosions = arcade.SpriteList()
+
         self.collect_sound = arcade.load_sound(":resources:sounds/coin1.wav")
         self.jump_sound = arcade.load_sound(":resources:sounds/jump1.wav")
 
     def setup(self):
+        self.start_time = time.time()  # Засекаем время
         self.scene = arcade.Scene()
+        self.scene.add_sprite_list("Player")
+        self.scene.add_sprite_list("Walls")
+        self.scene.add_sprite_list("Coins")
+        self.scene.add_sprite_list("Portal")  # Список для портала
 
-        # 1. Создаем игрока (используем твой класс из character.py)
+        with open("map.txt", "r") as map_file:
+            lines = map_file.readlines()
+            for row_index, line in enumerate(reversed(lines)):
+                for col_index, char in enumerate(line.strip()):
+                    x, y = col_index * 64, row_index * 64
+
+                    if char == "G":
+                        wall = arcade.Sprite(":resources:images/tiles/grassMid.png", scale=0.5)
+                        wall.center_x, wall.center_y = x, y
+                        self.scene.add_sprite("Walls", wall)
+                    elif char == "W":
+                        wall = arcade.Sprite(":resources:images/tiles/brickBrown.png", scale=0.5)
+                        wall.center_x, wall.center_y = x, y
+                        self.scene.add_sprite("Walls", wall)
+                    elif char == "C":
+                        coin = arcade.Sprite(":resources:images/items/coinGold.png", scale=0.5)
+                        coin.center_x, coin.center_y = x, y
+                        self.scene.add_sprite("Coins", coin)
+                    elif char == "E":  # ПОРТАЛ
+                        portal = arcade.Sprite(":resources:images/items/gemBlue.png", scale=0.8)
+                        portal.center_x, portal.center_y = x, y
+                        self.scene.add_sprite("Portal", portal)
+
         self.player = Player()
-        self.player.center_x = 128
-        self.player.center_y = 128
+        self.player.center_x, self.player.center_y = 128, 128
         self.scene.add_sprite("Player", self.player)
 
-        # 2. Создаем пол (Walls)
-        for x in range(0, 2000, 64):
-            wall = arcade.Sprite(":resources:images/tiles/grassMid.png", scale=0.5)
-            wall.center_x = x
-            wall.center_y = 32
-            self.scene.add_sprite("Walls", wall)
-
-        # 3. Раскидываем монетки
-        for x in range(200, 1800, 256):
-            coin = arcade.Sprite(":resources:images/items/coinGold.png", scale=0.5)
-            coin.center_x = x
-            coin.center_y = 150
-            self.scene.add_sprite("Coins", coin)
-
-        # 4. Физика
         self.physics = arcade.PhysicsEnginePlatformer(
-            self.player,
-            gravity_constant=constants.GRAVITY,
-            walls=self.scene["Walls"]
+            self.player, gravity_constant=constants.GRAVITY, walls=self.scene["Walls"]
         )
 
     def on_draw(self):
         self.window.clear()
-
-        # Отрисовка мира с камерой (ФТ-3)
         with self.camera.activate():
             self.scene.draw()
             self.explosions.draw()
 
-        # Отрисовка интерфейса
         with self.gui_camera.activate():
-            arcade.draw_text(f"Счет: {self.score}", 20, 600, arcade.color.WHITE, 18)
+            # Показываем счет и время на экране
+            current_elapsed = time.time() - self.start_time
+            arcade.draw_text(f"Монеты: {self.score}  |  Время: {current_elapsed:.1f}с",
+                             20, 580, arcade.color.WHITE, 16)
 
     def on_update(self, delta_time):
         self.physics.update()
-        self.scene.update_animation(delta_time, ["Player"])  # ФТ-4
+        self.scene.update_animation(delta_time, ["Player"])
         self.explosions.update()
-
-        # Слежение камеры (ФТ-3)
         self.camera.position = arcade.math.lerp_2d(self.camera.position, self.player.position, 0.1)
 
-        # Сбор монет и частицы (ФТ-5)
+        # ОБНУЛЯЕМ СЧЕТЧИК, когда коснулись земли
+        if self.physics.can_jump():
+            self.player.jumps_count = 0
+        # Сбор монет
         coin_hit_list = arcade.check_for_collision_with_list(self.player, self.scene["Coins"])
         for coin in coin_hit_list:
             coin.remove_from_sprite_lists()
             self.score += 1
             arcade.play_sound(self.collect_sound)
-            # Создаем искры
-            for _ in range(5):
-                particle = arcade.SpriteCircle(3, arcade.color.GOLD)
-                particle.center_x, particle.center_y = coin.center_x, coin.center_y
-                particle.change_x, particle.change_y = random.uniform(-3, 3), random.uniform(-3, 3)
-                self.explosions.append(particle)
 
-        # Проверка победы или падения
-        if self.score >= 5:
+        # КАСАНИЕ ПОРТАЛА (Конец игры)
+        if arcade.check_for_collision_with_list(self.player, self.scene["Portal"]):
+            self.total_time = round(time.time() - self.start_time, 2)
+            # Записываем в рекорды: Имя, Монеты, Время
+            self.db.add_score("Игрок", self.score, self.total_time)
+
             win_view = WinView()
             win_view.score = self.score
-            self.db.add_score("Player1", self.score, 1)  # Сохраняем в CSV (ФТ-6)
+            win_view.final_time = self.total_time
             self.window.show_view(win_view)
-
-        if self.player.center_y < -100:
-            self.window.show_view(MenuView())
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.UP or key == arcade.key.W:
+            # ПЕРВЫЙ ПРЫЖОК (с земли)
             if self.physics.can_jump():
                 self.player.change_y = constants.PLAYER_JUMP_SPEED
+                self.player.jumps_count = 1  # Отмечаем, что один прыжок сделан
                 arcade.play_sound(self.jump_sound)
-        elif key == arcade.key.LEFT or key == arcade.key.A:
+
+            # ВТОРОЙ ПРЫЖОК (в воздухе)
+            elif self.player.jumps_count == 1:
+                self.player.change_y = constants.PLAYER_JUMP_SPEED
+                self.player.jumps_count = 2  # Потратили второй прыжок
+                arcade.play_sound(self.jump_sound)
+        elif key in [arcade.key.LEFT, arcade.key.A]:
             self.player.change_x = -constants.PLAYER_MOVEMENT_SPEED
-        elif key == arcade.key.RIGHT or key == arcade.key.D:
+        elif key in [arcade.key.RIGHT, arcade.key.D]:
             self.player.change_x = constants.PLAYER_MOVEMENT_SPEED
 
     def on_key_release(self, key, modifiers):

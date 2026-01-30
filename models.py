@@ -8,10 +8,9 @@ class ScoreManager:
         if not os.path.exists(self.file_path):
             with open(self.file_path, "w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
-                writer.writerow(["Name", "Score", "Level"])
+                writer.writerow(["Name", "Score", "Time"])
 
-    def add_score(self, name, score, level):
-        """Метод, который требует views.py"""
+    def add_score(self, name, coins, time_spent):
         with open(self.file_path, "a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow([name, score, level])
+            writer.writerow([name, coins, time_spent])
