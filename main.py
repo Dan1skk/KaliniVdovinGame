@@ -1,6 +1,6 @@
 import arcade
 import constants
-from views import MenuView
+from views.menu import MenuView
 
 def main():
     # создаем окно
