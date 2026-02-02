@@ -22,6 +22,7 @@ class Player(arcade.Sprite):
         self.character_face_direction = 0
         self.cur_texture = 0
         self.scale = constants.SPRITE_SCALING
+        self.invincible_timer = 0  # таймер для мигания и неуязвимости
 
         # Находим путь к роботу в твоем .venv
         venv_path = os.path.dirname(os.path.dirname(sys.executable))
@@ -67,3 +68,11 @@ class Player(arcade.Sprite):
 
         frame = self.cur_texture // constants.UPDATES_PER_FRAME
         self.texture = self.walk_textures[frame][self.character_face_direction]
+
+        # уменьшаем таймер неуязвимости если он больше нуля
+        if self.invincible_timer > 0:
+            self.invincible_timer -= delta_time
+            # можно сделать мигание (прозрачность)
+            self.alpha = 150 if int(self.invincible_timer * 10) % 2 == 0 else 255
+        else:
+            self.alpha = 255  # возвращаем нормальный вид
