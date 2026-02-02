@@ -8,6 +8,7 @@ class MenuView(arcade.View):
         super().__init__()
         self.levels = [1, 2]
         self.tiles = []
+        self.settings_tile = {"x": constants.SCREEN_WIDTH / 2, "y": 100, "w": 200, "h": 50}
 
         # Параметры плиток
         w, h, margin = 160, 110, 40

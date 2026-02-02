@@ -7,26 +7,32 @@ class PauseView(arcade.View):
         self.game_view = game_view
 
     def on_draw(self):
-        self.clear()
-
-        # рисуем игру на фоне
+        # Рисуем игру на заднем плане, чтобы игрок видел, где остановился
         self.game_view.on_draw()
 
-        # ТУТ ИСПРАВЛЕНО: lrbt (лево, право, низ, верх)
-        arcade.draw_lrbt_rectangle_filled(
-            0,
-            self.window.width,
-            0,
-            self.window.height,
+        # Затемняющий фильтр (используем Rect для Arcade 3.0+)
+        arcade.draw_rect_filled(
+            arcade.XYWH(self.window.width / 2, self.window.height / 2,
+                        self.window.width, self.window.height),
             (0, 0, 0, 150)
         )
 
-        # текст паузы
         arcade.draw_text("ПАУЗА", self.window.width / 2, self.window.height / 2 + 50,
-                         arcade.color.WHITE, font_size=50, anchor_x="center")
-        arcade.draw_text("Нажми ESC, чтобы вернуться в бой", self.window.width / 2, self.window.height / 2 - 20,
-                         arcade.color.WHITE, font_size=20, anchor_x="center")
+                         arcade.color.WHITE, 50, anchor_x="center")
+
+        arcade.draw_text("Нажми ESC, чтобы продолжить", self.window.width / 2, self.window.height / 2 - 20,
+                         arcade.color.WHITE, 20, anchor_x="center")
+
+        arcade.draw_text("Нажми M, чтобы выйти в меню", self.window.width / 2, self.window.height / 2 - 60,
+                         arcade.color.LIGHT_GRAY, 18, anchor_x="center")
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ESCAPE:
+            # Возвращаемся в текущую игру
             self.window.show_view(self.game_view)
+
+        elif key == arcade.key.M:
+            # Выходим в главное меню
+            from views.menu import MenuView
+            menu_view = MenuView()
+            self.window.show_view(menu_view)
