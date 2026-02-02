@@ -6,6 +6,7 @@ from entities.player import Player
 from entities.enemy import Enemy
 from views.win import WinView
 from views.game_over import GameOverView
+import os
 
 class GameView(arcade.View):
     def __init__(self):
@@ -31,50 +32,77 @@ class GameView(arcade.View):
         self.jump_sound = arcade.load_sound(":resources:sounds/jump1.wav")
 
     def setup(self):
-        self.start_time = time.time()  # Засекаем время
+        self.start_time = time.time()
         self.scene = arcade.Scene()
-        # Добавляем пустые списки заранее, чтобы не было KeyError
-        self.scene.add_sprite_list("Player")
-        self.scene.add_sprite_list("Walls")
-        self.scene.add_sprite_list("Coins")
-        self.scene.add_sprite_list("Enemies")  # Вот это должно быть тут!
-        self.scene.add_sprite_list("Portal")
 
-        # 1. Формируем путь к папке levels
-        map_path = f"levels/map{self.level}.txt"
-
-        # 2. ОДИН цикл загрузки вместо двух
-        try:
-            with open(map_path, "r") as map_file:
-                lines = map_file.readlines()
-                for row_index, line in enumerate(reversed(lines)):
-                    for col_index, char in enumerate(line.strip()):
-                        x, y = col_index * 64, row_index * 64
-
-                        if char == "G":
-                            wall = arcade.Sprite(":resources:images/tiles/grassMid.png", scale=0.5)
-                            wall.center_x, wall.center_y = x, y
-                            self.scene.add_sprite("Walls", wall)
-                        elif char == "W":
-                            wall = arcade.Sprite(":resources:images/tiles/brickBrown.png", scale=0.5)
-                            wall.center_x, wall.center_y = x, y
-                            self.scene.add_sprite("Walls", wall)
-                        elif char == "C":
-                            coin = arcade.Sprite(":resources:images/items/coinGold.png", scale=0.5)
-                            coin.center_x, coin.center_y = x, y
-                            self.scene.add_sprite("Coins", coin)
-                        elif char == "E":
-                            portal = arcade.Sprite(":resources:images/items/gemBlue.png", scale=0.8)
-                            portal.center_x, portal.center_y = x, y
-                            self.scene.add_sprite("Portal", portal)
-                        elif char == "S":
-                            enemy = Enemy(x, y)
-                            self.scene.add_sprite("Enemies", enemy)
-        except FileNotFoundError:
-            print(f"Критическая ошибка: Файл {map_path} не найден!")
-            return  # Выходим из метода, чтобы не упасть дальше
+        # пути в фотачкам
+        current_dir = os.path.dirname(__file__)
+        assets_path = os.path.normpath(os.path.join(current_dir, "..", "assets", "images"))
 
 
+        # 1. Инициализируем ВСЕ списки сразу
+        for name in ["Player", "Walls", "Coins", "Enemies", "Portal", "Heals", "Spikes"]:
+            self.scene.add_sprite_list(name)
+
+        # 2. Формируем путь к карте
+        current_dir = os.path.dirname(__file__)
+        file_path = os.path.normpath(os.path.join(current_dir, "..", "levels", f"map{self.level}.txt"))
+
+        # 3. Читаем и парсим карту
+        if not os.path.exists(file_path):
+            print(f"ОШИБКА: Файл {file_path} реально не существует!")
+            return
+
+        with open(file_path, "r") as f:
+            lines = f.readlines()
+            # Инвертируем список строк, чтобы y=0 был внизу
+            lines = [line.strip() for line in lines if line.strip()]
+            for row_index, line in enumerate(reversed(lines)):
+                for col_index, char in enumerate(line):
+                    # Стандартная сетка: центр объекта = индекс * 64 + половина (32)
+                    x = col_index * 64 + 32
+                    y = row_index * 64 + 32
+
+                    if char == "G":
+                        wall = arcade.Sprite(":resources:images/tiles/grassMid.png", constants.TILE_SCALING)
+                        wall.position = (x, y)
+                        self.scene.add_sprite("Walls", wall)
+
+                    elif char == "W":
+                        wall = arcade.Sprite(":resources:images/tiles/brickBrown.png", constants.TILE_SCALING)
+                        wall.position = (x, y)
+                        self.scene.add_sprite("Walls", wall)
+
+                    elif char == "C":
+                        coin = arcade.Sprite(":resources:images/items/coinGold.png", constants.COIN_SCALING)
+                        coin.position = (x, y)
+                        self.scene.add_sprite("Coins", coin)
+
+                    elif char == "E":
+                        portal = arcade.Sprite(":resources:images/items/gemBlue.png", 0.8)
+                        portal.position = (x, y)
+                        self.scene.add_sprite("Portal", portal)
+
+                    elif char == "S":
+                        enemy = Enemy(x, y)
+                        self.scene.add_sprite("Enemies", enemy)
+
+                    elif char == "H":  # ХИЛКА
+                        heart_file = os.path.join(assets_path, "heal.png")
+                        health = arcade.Sprite(heart_file, scale=0.20)
+                        health.position = (x, y)
+                        self.scene.add_sprite("Heals", health)
+
+                    elif char == "X":  # ШИПЫ
+                        spike_file = os.path.join(assets_path, "shipi.png")
+                        spike = arcade.Sprite(spike_file)
+                        spike.width = 64
+                        spike.height = 20
+                        spike.center_x = x
+                        spike.bottom = y - 32
+                        self.scene.add_sprite("Spikes", spike)
+
+        # 4. Игрок и физика
         self.player = Player()
         self.player.center_x, self.player.center_y = 128, 128
         self.scene.add_sprite("Player", self.player)
@@ -82,7 +110,6 @@ class GameView(arcade.View):
         self.physics = arcade.PhysicsEnginePlatformer(
             self.player, gravity_constant=constants.GRAVITY, walls=self.scene["Walls"]
         )
-
 
     def on_draw(self):
         self.window.clear()
@@ -145,6 +172,25 @@ class GameView(arcade.View):
                     self.window.show_view(GameOverView())
                 # Прерываем цикл, чтобы одна коллизия не отняла все жизни сразу
                 break
+
+        # --- ЛОГИКА ШИПОВ ---
+        if arcade.check_for_collision_with_list(self.player, self.scene["Spikes"]):
+            self.lives -= 1
+            arcade.play_sound(self.death_sound)
+            if self.lives > 0:
+                # Отбрасываем на старт при уколе
+                self.player.center_x, self.player.center_y = 128, 128
+                self.player.change_x, self.player.change_y = 0, 0
+            else:
+                self.window.show_view(GameOverView())
+
+        # --- ЛОГИКА ХИЛОК ---
+        heal_hit_list = arcade.check_for_collision_with_list(self.player, self.scene["Heals"])
+        for heal in heal_hit_list:
+            if self.lives < 5:  # Например, максимум 5 жизней
+                self.lives += 1
+                heal.remove_from_sprite_lists()
+                arcade.play_sound(self.collect_sound)
 
 
 
