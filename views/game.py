@@ -187,7 +187,7 @@ class GameView(arcade.View):
         # --- ЛОГИКА ХИЛОК ---
         heal_hit_list = arcade.check_for_collision_with_list(self.player, self.scene["Heals"])
         for heal in heal_hit_list:
-            if self.lives < 5:  # Например, максимум 5 жизней
+            if self.lives < 3:  # Например, максимум 5 жизней
                 self.lives += 1
                 heal.remove_from_sprite_lists()
                 arcade.play_sound(self.collect_sound)
