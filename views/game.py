@@ -100,65 +100,77 @@ class GameView(arcade.View):
         self.physics.update()
         self.scene.update_animation(delta_time, ["Player"])
 
-        # Логика врагов (патруль)
+        # --- ЛОГИКА ВРАГОВ (ДВИЖЕНИЕ) ---
         enemies = self.scene.get_sprite_list("Enemies")
-        walls = self.scene.get_sprite_list("Walls")  # Достаем стены
+        walls = self.scene.get_sprite_list("Walls")
 
         for enemy in enemies:
-            # Передаем стены врагу, чтобы он не упал
             enemy.update(walls)
-
-            # Старая проверка столкновения со стенами (чтобы разворачивался от препятствий)
+            # Если враг врезался в стену (не край), тоже разворачиваем
             if arcade.check_for_collision_with_list(enemy, walls):
                 enemy.reverse_direction()
 
-        # --- ОБНОВЛЕННАЯ ПРОВЕРКА СМЕРТИ ---
-        # Если коснулись врага ИЛИ упали в яму
-        if arcade.check_for_collision_with_list(self.player, enemies) or self.player.center_y < -100:
+        # --- ПРОВЕРКА СТОЛКНОВЕНИЙ ИГРОКА ---
+
+        # 1. Падение в яму
+        if self.player.center_y < -100:
             self.lives -= 1
             arcade.play_sound(self.death_sound)
-
             if self.lives > 0:
-                # Еще есть попытки — просто возвращаем на старт
-                self.player.center_x = 128
-                self.player.center_y = 128
-                self.player.change_x = 0
-                self.player.change_y = 0
+                self.player.center_x, self.player.center_y = 128, 128
+                self.player.change_x, self.player.change_y = 0, 0
             else:
-                # ВОТ ТУТ СОБАКА ЗАРЫТА:
-                # Вместо self.setup() вызываем экран смерти
-                death_view = GameOverView()
-                self.window.show_view(death_view)
+                self.window.show_view(GameOverView())
+
+        # 2. Столкновение с врагами
+        # Сначала получаем список ВСЕХ врагов, которых коснулись
+        enemy_hit_list = arcade.check_for_collision_with_list(self.player, enemies)
+
+        for enemy in enemy_hit_list:
+            # Считаем, что мы прыгнули сверху, если:
+            # 1. Мы падаем (change_y < 0)
+            # 2. Низ игрока выше, чем центр врага (с запасом 10 пикселей для отзывчивости)
+            if self.player.change_y < 0 and self.player.bottom > (enemy.center_y - 10):
+                enemy.remove_from_sprite_lists()
+                self.player.change_y = constants.PLAYER_JUMP_SPEED / 2
+                arcade.play_sound(self.collect_sound)
+            else:
+                # В любом другом случае (идем в лоб, прыгаем снизу) — это урон
+                self.lives -= 1
+                arcade.play_sound(self.death_sound)
+                if self.lives > 0:
+                    self.player.center_x, self.player.center_y = 128, 128
+                    self.player.change_x, self.player.change_y = 0, 0
+                else:
+                    self.window.show_view(GameOverView())
+                # Прерываем цикл, чтобы одна коллизия не отняла все жизни сразу
+                break
 
 
+
+        # --- ОСТАЛЬНОЙ КОД (КАМЕРА, МОНЕТЫ, ПОРТАЛ) ---
         self.explosions.update()
         self.camera.position = arcade.math.lerp_2d(self.camera.position, self.player.position, 0.1)
 
-        # ОБНУЛЯЕМ СЧЕТЧИК, когда коснулись земли
         if self.physics.can_jump():
             self.player.jumps_count = 0
 
-
-        # 1. Сбор монет (Здесь только монеты!)
         coin_hit_list = arcade.check_for_collision_with_list(self.player, self.scene["Coins"])
         for coin in coin_hit_list:
             coin.remove_from_sprite_lists()
             self.score += 1
             arcade.play_sound(self.collect_sound)
 
-        # 2. КАСАНИЕ ПОРТАЛА (Теперь это отдельный блок, вне цикла!)
         if arcade.check_for_collision_with_list(self.player, self.scene["Portal"]):
             self.total_time = round(time.time() - self.start_time, 2)
-
-            # Сохраняем результат в БД
             self.db.add_score(f"Игрок (Ур. {self.level})", self.score, self.total_time)
-
             from views.win import WinView
             win_view = WinView()
             win_view.score = self.score
             win_view.final_time = self.total_time
             win_view.current_level = self.level
             self.window.show_view(win_view)
+
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.UP or key == arcade.key.W:
