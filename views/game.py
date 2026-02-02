@@ -55,7 +55,7 @@ class GameView(arcade.View):
         self.gui_sprites.append(self.coin_icon)
 
         # 2. Фон
-        bg_path = "assets/images/background.png"
+        bg_path = "assets/images/background4.jpg"
         if os.path.exists(bg_path):
             self.background = arcade.Sprite(bg_path)
             self.background.center_x = self.window.width / 2
@@ -65,7 +65,7 @@ class GameView(arcade.View):
             self.background.width = self.window.width
             self.background.height = self.window.height
 
-            self.background.color = (100, 100, 100)
+            #self.background.color = (100, 100, 100)
             self.background_list.append(self.background)
 
         # 3. Загрузка карты
