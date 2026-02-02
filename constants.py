@@ -15,3 +15,7 @@ COIN_SCALING = 0.5
 
 # обновление анимки
 UPDATES_PER_FRAME = 7
+
+#громкость
+DEFAULT_MUSIC_VOLUME = 0.1
+DEFAULT_SOUND_VOLUME = 0.5
