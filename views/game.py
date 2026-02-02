@@ -26,6 +26,10 @@ class GameView(arcade.View):
         self.lives = 3
         self.start_time = 0
 
+        # Таймер койота: сколько времени игрок может прыгать после схода с платформы
+        self.coyote_timer = 0
+        self.COYOTE_DURATION = 1  # Время в секундах
+
         self.db = ScoreManager()
         self.explosions = arcade.SpriteList()
         self.heart_list = arcade.SpriteList()
@@ -173,6 +177,11 @@ class GameView(arcade.View):
         self.physics.update()
         self.scene.update_animation(delta_time, ["Player"])
 
+        if self.physics.can_jump():
+            self.coyote_timer = self.COYOTE_DURATION
+        else:
+            self.coyote_timer -= delta_time
+
         if self.player.invincible_timer > 0:
             self.player.invincible_timer -= delta_time
             self.player.alpha = 150 if int(self.player.invincible_timer * 10) % 2 == 0 else 255
@@ -181,8 +190,11 @@ class GameView(arcade.View):
 
         enemies = self.scene.get_sprite_list("Enemies")
         walls = self.scene.get_sprite_list("Walls")
+        spikes = self.scene.get_sprite_list("Spikes")  # Достаем список шипов
+
         for enemy in enemies:
-            enemy.update(walls)
+            # Передаем и стены, и шипы в метод update слайма
+            enemy.update(walls, spikes)
 
         if self.player.center_y < -100:
             self.handle_damage()
@@ -230,7 +242,7 @@ class GameView(arcade.View):
         self.update_hearts()
         arcade.play_sound(self.death_sound)
         if self.lives <= 0:
-            self.window.show_view(GameOverView())
+            self.window.show_view(GameOverView(self.level))  # Передаем self.level!
             return
         self.player.invincible_timer = 1.0
         if source_sprite:
@@ -250,10 +262,14 @@ class GameView(arcade.View):
 
     def on_key_press(self, key, modifiers):
         if key in [arcade.key.UP, arcade.key.W]:
-            if self.physics.can_jump():
+            # Прыгаем, если мы на земле ИЛИ если таймер койота активен
+            if self.physics.can_jump() or self.coyote_timer > 0:
                 self.player.change_y = constants.PLAYER_JUMP_SPEED
                 self.player.jumps_count = 1
+                self.coyote_timer = 0  # Обнуляем, чтобы нельзя было прыгнуть "дважды" в воздухе без двойного прыжка
                 arcade.play_sound(self.jump_sound)
+
+            # Двойной прыжок (если он у тебя реализован через jumps_count)
             elif getattr(self.player, 'jumps_count', 0) == 1:
                 self.player.change_y = constants.PLAYER_JUMP_SPEED
                 self.player.jumps_count = 2

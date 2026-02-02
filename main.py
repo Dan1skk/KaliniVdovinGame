@@ -10,10 +10,13 @@ def main():
     fullscreen = False
     volume = 0.1
 
+    data_dir = "data"
+    settings_path = os.path.join(data_dir, "settings.json")
+
     # Загружаем настройки, если файл существует
-    if os.path.exists("settings.json"):
+    if os.path.exists(settings_path):
         try:
-            with open("settings.json", "r") as f:
+            with open(settings_path, "r") as f:
                 data = json.load(f)
                 fullscreen = data.get("fullscreen", False)
                 volume = data.get("volume", 0.1)

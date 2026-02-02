@@ -1,8 +1,11 @@
-W..................................W
-W..........C.......................W
-W.........GGG.............S.C....E.W
-W...............C......GGGGGGGGGGGGW
-W.........SC...GGGG................W
-W........GGGG.......C..............W
-W..C..GGGG..........S..............W
-WGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGW
+WWWWWWWWWWWWWWWWWWWW
+W                  W
+W                  W
+W   C   C   C      W
+W  GGGGGGGGGGG     W
+W                E W
+W    S         GGGGW
+W  GGGGG           W
+W        S         W
+W P    XXXXX   S   W
+GGGGGGGGGGGGGGGGGGGG

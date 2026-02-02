@@ -7,7 +7,7 @@ class SettingsView(arcade.View):
     def __init__(self, prev_view):
         super().__init__()
         self.prev_view = prev_view
-        self.settings_file = "settings.json"
+        self.settings_file = os.path.join("data", "settings.json")
 
     def save_settings(self):
         data = {

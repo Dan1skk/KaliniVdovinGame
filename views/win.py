@@ -27,23 +27,27 @@ class WinView(arcade.View):
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ENTER:
+            import os
             from views.game import GameView
-            next_level_num = self.current_level + 1
 
-            # ПРОВЕРКА: Существует ли файл следующего уровня?
-            # Путь должен совпадать с тем, как ты загружаешь карты (например, level_2.json)
-            map_path = f"assets/maps/level_{next_level_num}.json"  # Подставь свое расширение
+            # 1. Вычисляем номер следующего уровня
+            next_level = self.current_level + 1
+            file_path = f"levels/map{next_level}.txt"
 
-            if os.path.exists(map_path):
-                # Если уровень есть — загружаем его
-                next_lvl = GameView()
-                next_lvl.level = next_level_num
-                next_lvl.setup()
-                self.window.show_view(next_lvl)
+            # 2. Проверяем, существует ли такой файл
+            if os.path.exists(file_path):
+                game = GameView()
+                game.level = next_level
+                game.setup()
+                self.window.show_view(game)
             else:
-                # Если уровня нет — возвращаемся в меню (или можно сделать экран "Конец игры")
+                # Если файлов больше нет — поздравляем, игра пройдена, идем в меню
                 from views.menu import MenuView
                 self.window.show_view(MenuView())
+
+        elif key == arcade.key.M:
+            from views.menu import MenuView
+            self.window.show_view(MenuView())
 
         elif key == arcade.key.M:
             from views.menu import MenuView
