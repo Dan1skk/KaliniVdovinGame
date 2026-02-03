@@ -34,7 +34,7 @@ class GameView(arcade.View):
 
         # Coyote Time
         self.coyote_timer = 0
-        self.COYOTE_DURATION = 0.15
+        self.COYOTE_DURATION = 1
 
         self.db = ScoreManager()
 
