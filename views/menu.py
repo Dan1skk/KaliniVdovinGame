@@ -18,7 +18,7 @@ class MenuView(arcade.View):
 
         self.background_list = arcade.SpriteList()
         self.bg_sprite = arcade.Sprite("assets/images/background4.jpg")
-        self.bg_sprite.color = (100, 100, 100)
+        self.bg_sprite.color = (200, 200, 200)
         self.background_list.append(self.bg_sprite)
 
         self.reposition_elements()
