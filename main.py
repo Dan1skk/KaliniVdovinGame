@@ -4,7 +4,7 @@ import json
 import os
 from views.menu import MenuView
 
-
+    
 def main():
     # Настройки по умолчанию
     fullscreen = False
